@@ -1,0 +1,6 @@
+*.log
+*.db
+*.rar
+*project
+src/__pycache__/
+src/config_.py
