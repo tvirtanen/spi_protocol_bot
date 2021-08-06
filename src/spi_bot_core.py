@@ -32,6 +32,15 @@ bot_logger.addHandler(handler)
 def extract_arg(arg):
     return arg.split()[1:]
 
+telebot.apihelper.READ_TIMEOUT = 5
+
+def send_msg(msg_id, text):
+    try:
+        bot.send_message(msg_id, text)
+    except Exception as e:
+        logging.info(e)
+        send_msg(msg_id, text)
+        
 @bot.message_handler(content_types=["voice"])
 def processing_voice_message(message):
     if (message.chat.id in user_list.chatList):
@@ -42,20 +51,20 @@ def processing_voice_message(message):
                 time_last = user_list.chatList[message.chat.id].upd_user(message.from_user.first_name, time.time())
                 if time_last == 0:
                     user_list.chatList[message.chat.id].idDict[message.from_user.first_name] = message.from_user.id
-                    bot.send_message(message.chat.id, 'Это первое сообщение от '
+                    send_msg(message.chat.id, 'Это первое сообщение от '
                       + str(message.from_user.first_name)
                       + '. Я запомнил')
                     bot_logger.info('First message from ' + str(message.from_user.first_name))
                 else:
                     #if(user_list.userDict[message.from_user.first_name] != 2):
-                    bot.send_message(message.chat.id, 'Интервал между сообщениями '
+                    send_msg(message.chat.id, 'Интервал между сообщениями '
                       + str(message.from_user.first_name)
                       + ' составляет '
                       + time.strftime('%H:%M:%S', time.gmtime(int(time_last))))
                     bot_logger.info('message from '+ str(message.from_user.first_name))
     
                     if time_last > user_list.chatList[message.chat.id].zombieTime:
-                        bot.send_message(message.chat.id, '#alert Интервал между сообщениями '
+                        send_msg(message.chat.id, '#alert Интервал между сообщениями '
                           + str(message.from_user.first_name)
                           + ' больше порогового значения'
                           + '. Рекомендовано исключение из чата')
@@ -72,7 +81,7 @@ def processing_voice_message(message):
                             except Exception:
                                 bot_logger.error('Can\'t kick')
                     #else:
-                    #    bot.send_message(user_list.chat_id, 'Внимание! '
+                    #    send_msg(user_list.chat_id, 'Внимание! '
                     #            + str(message.from_user.first_name)
                     #            + ' ненадежен и уже провалил проверку'
                     #            + '. Рекомендовано исключить его из чата
@@ -85,101 +94,101 @@ def set_ref_time(message):
         #user_list.chatList[message.chat.id] = db.dictDB()
         user_list.chatList[message.chat.id] = db.TimeDB()
         user_list.chatList[message.chat.id].inProgress = 1
-        bot.send_message(message.chat.id, '#begin Итак, время пошло. Удачной игры, я за вами наблюдаю!')
+        send_msg(message.chat.id, '#begin Итак, время пошло. Удачной игры, я за вами наблюдаю!')
         user_list.chatList[message.chat.id].chat_id = message.chat.id
         bot_logger.info("message.chat.id is " + str(message.chat.id))
         bot_logger.info("Start observing")
     else:
         if user_list.chatList[message.chat.id].inProgress == 0:
             user_list.chatList[message.chat.id].inProgress = 1
-            bot.send_message(message.chat.id, '#continue Снова наблюдать!')
+            send_msg(message.chat.id, '#continue Снова наблюдать!')
             bot_logger.info("message.chat.id is " + str(message.chat.id))
             bot_logger.info("Continue observing")
         else:
-            bot.send_message(message.chat.id, 'Я и так уже наблюдаю!')
+            send_msg(message.chat.id, 'Я и так уже наблюдаю!')
 
 #@bot.channel_post_handler(commands=["track_on"])
 def set_tracker_time(message):
     if (not message.chat.id in tracker_list.chatList):
         tracker_list.chatList[message.chat.id] = db_tracker.TrackerDB();
         tracker_list.chatList[message.chat.id].inProgress = 1
-        bot.send_message(message.chat.id, '#begin Слежу за трекером')
-        bot.send_message(message.chat.id, "message.chat.id is " + str(message.chat.id))
+        send_msg(message.chat.id, '#begin Слежу за трекером')
+        send_msg(message.chat.id, "message.chat.id is " + str(message.chat.id))
         tracker_list.chatList[message.chat.id].chat_id = message.chat.id
         bot_logger.info("message.chat.id is " + str(message.chat.id))
         bot_logger.info("Start tracker observing")
     else:
         if tracker_list.chatList[message.chat.id].inProgress == 0:
             tracker_list.chatList[message.chat.id].inProgress = 1
-            bot.send_message(message.chat.id, '#continue Продолжаю следить за трекером')
+            send_msg(message.chat.id, '#continue Продолжаю следить за трекером')
         else:
-            bot.send_message(message.chat.id, 'Я и так уже слежу за трекером!')  
+            send_msg(message.chat.id, 'Я и так уже слежу за трекером!')  
         
 @bot.message_handler(commands=["set_chan_id"])
 def set_chat_id(message):
-    bot.send_message(message.chat.id, message.text)
+    send_msg(message.chat.id, message.text)
     try:
         #msg_id = int(extract_arg(message.text))
         msg_id = int(message.text[13:])
       
-        bot.send_message(message.chat.id, msg_id)
+        send_msg(message.chat.id, msg_id)
         
         if (msg_id in tracker_list.chatList):
             if(tracker_list.chatList[msg_id].inProgress == 1):
                 tracker_list.chatList[msg_id].message_chat_id = message.chat.id
-                bot.send_message(message.chat.id, '#set_id Теперь сообщения о трекере будут приходить сюда')
-                bot.send_message(tracker_list.chatList[msg_id].chat_id, '#set_id Теперь есть куда сообщать об ошибках')
+                send_msg(message.chat.id, '#set_id Теперь сообщения о трекере будут приходить сюда')
+                send_msg(tracker_list.chatList[msg_id].chat_id, '#set_id Теперь есть куда сообщать об ошибках')
             else:
-                bot.send_message(message.chat.id, '#set_id Увы, пока никто не следит за трекером')
+                send_msg(message.chat.id, '#set_id Увы, пока никто не следит за трекером')
         else:
-            bot.send_message(message.chat.id, '#set_id Нет такого чата')
+            send_msg(message.chat.id, '#set_id Нет такого чата')
     except:
-        bot.send_message(message.chat.id, '#set_id неправильно набран номер')
+        send_msg(message.chat.id, '#set_id неправильно набран номер')
     
         
 @bot.message_handler(commands = ["get_chat_id"])
 def get_chat_id(message):
-    bot.send_message(message.chat.id, "message.chat.id is " + str(message.chat.id))
+    send_msg(message.chat.id, "message.chat.id is " + str(message.chat.id))
            
 #@bot.channel_post_handler(commands=["get_channel_id"])
 def get_channel_id(message):
-    bot.send_message(message.chat.id, "Channel ID is " + str(message.chat.id))
+    send_msg(message.chat.id, "Channel ID is " + str(message.chat.id))
         
 #@bot.channel_post_handler(commands=["set_alert_time"])
 def set_alert_time(message):
     try:
         alert_time = int(message.text[16:])
         tracker_list.chatList[message.chat.id].alert_time = alert_time
-        bot.send_message(message.chat.id, "Трекер поднимет тревогу через " + str(alert_time))
+        send_msg(message.chat.id, "Трекер поднимет тревогу через " + str(alert_time))
     except:
-        bot.send_message(message.chat.id, "Что-то пошло не так")
+        send_msg(message.chat.id, "Что-то пошло не так")
                 
 @bot.message_handler(commands=["auto_kick_on"])
 def set_kicking_on(message):
     #name = extract_arg(message.text)
     user_list.chatList[message.chat.id].kicking_on = 1
-    bot.send_message(message.chat.id, 'Автоматическое удаление активировано')
+    send_msg(message.chat.id, 'Автоматическое удаление активировано')
    
     
 @bot.message_handler(commands=["auto_kick_off"])
 def set_kicking_off(message):
     #name = extract_arg(message.text)
     user_list.chatList[message.chat.id].kicking_on = 0
-    bot.send_message(message.chat.id, 'Автоматическое удаление деактивировано')
+    send_msg(message.chat.id, 'Автоматическое удаление деактивировано')
     
 @bot.message_handler(commands = ["ignore"])
 def set_user_to_ignore(message):
     name = extract_arg(message.text)
     user_list.chatList[message.chat.id].ignoreList.append(name[0])
-    bot.send_message(message.chat.id, 'Сообщения от пользователя ' + str(name[0]) + ' будут игнорироваться')
+    send_msg(message.chat.id, 'Сообщения от пользователя ' + str(name[0]) + ' будут игнорироваться')
     
 #@bot.channel_post_handler(content_types=["text"])
 def processing_text_message(message):
     if (message.chat.id in tracker_list.chatList): 
         if (message.chat.id == tracker_list.chatList[message.chat.id].chat_id):
-            #bot.send_message(message.chat.id, message.text)
+            #send_msg(message.chat.id, message.text)
             if message.text == 'Системы работают исправно':
-                bot.send_message(message.chat.id, "точно-точно")
+                send_msg(message.chat.id, "точно-точно")
                 if tracker_list.chatList[message.chat.id].inProgress == 1:
                     #if 'default' in tracker_list.userDict:
                     #    tracker_list.userDict.pop('default')
@@ -187,7 +196,7 @@ def processing_text_message(message):
                     time_last = tracker_list.chatList[message.chat.id].upd_user('default', time.time())
                     if tracker_list.chatList[message.chat.id].isInit == 0:
                         #tracker_list.idDict[message.from_user.first_name] = message.from_user.id
-                        bot.send_message(message.chat.id, 'Это первое сообщение '
+                        send_msg(message.chat.id, 'Это первое сообщение '
                           #+ str(message.from_user.first_name)
                           + '. Я запомнил')
                         bot_logger.info('First message from the tracker')
@@ -212,7 +221,7 @@ def comrades_checking():
                             
                             #alert each hour after zombieTime
                             if time_last > user_list.chatList[chatID].zombieTime and time.strftime('%M', time.gmtime(int(time_last))) == '00':
-                                bot.send_message(user_list.chatList[chatID].chat_id, '#alert '
+                                send_msg(user_list.chatList[chatID].chat_id, '#alert '
                                     + str(userName)
                                     + ' молчит слишком долго: '
                                     + time.strftime(' %H:%M', time.gmtime(int(time_last)))
@@ -240,7 +249,7 @@ def comrades_checking():
                                     + str(userName)
                                     + ' молчит уже'
                                     + time.strftime(' %H:%M', time.gmtime(int(time_last))))
-                                    bot.send_message(user_list.chatList[chatID].chat_id, st)
+                                    send_msg(user_list.chatList[chatID].chat_id, st)
                                     bot_logger.info(st)
         if (len(user_list.chatList) > 0):
             try:
@@ -264,10 +273,10 @@ def tracker_checking():
                 #if tracker.status not in ['restricted', 'left', 'kicked']: 
                 time_last = tracker_list.chatList[chatID].check_user(userName, time.time())
                 if time_last > tracker_list.chatList[chatID].alert_time * 60:
-                    bot.send_message(tracker_list.chatList[chatID].chat_id, '#alert '
+                    send_msg(tracker_list.chatList[chatID].chat_id, '#alert '
                         + '@StanleyKint, @l_casey, @ToivoVirtanen'    
                         + ', проверьте трекер')
-                    bot.send_message(tracker_list.chatList[chatID].message_chat_id, '#alert '
+                    send_msg(tracker_list.chatList[chatID].message_chat_id, '#alert '
                         + '@StanleyKint, @l_casey, @ToivoVirtanen'    
                         + ', проверьте трекер')
                     bot_logger.info('Tracker is locked')
